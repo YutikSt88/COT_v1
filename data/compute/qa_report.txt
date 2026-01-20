@@ -1,0 +1,2 @@
+INFO: Open Interest INFO: 33 rows with abs(open_interest_chg_1w_pct) > 0.35 (max 20.59)
+WARN: Open Interest WARN: 4 rows with abs(open_interest_chg_1w_pct) > 0.50 (max 20.59)
