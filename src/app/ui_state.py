@@ -10,7 +10,7 @@ import yaml
 from src.common.paths import ProjectPaths
 
 # Version constant (single source of truth)
-APP_VERSION = "COT_v1.2.8"
+APP_VERSION = "COT_v1.2.9"
 
 
 def get_project_paths():

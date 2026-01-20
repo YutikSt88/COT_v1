@@ -290,7 +290,7 @@ if current_week_idx < 0:  # ✅
 
 ---
 
-**Last updated:** 2026-01-20 (v1.2.8)
+**Last updated:** 2026-01-20 (v1.2.9)
 
 
 ## Compute QA (?????????)

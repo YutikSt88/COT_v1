@@ -381,7 +381,7 @@ df['nc_net_13w'] = df.groupby('market_key')['nc_net'].rolling(13).mean()  # Ма
 ### Де зберігається версія
 `src/app/ui_state.py`:
 ```python
-APP_VERSION = "COT_v1.2.8"
+APP_VERSION = "COT_v1.2.9"
 ```
 
 ### Коли міняється
@@ -483,11 +483,16 @@ APP_VERSION = "COT_v1.2.8"
 ---
 
 **Rebuilt from:** cot-mvp (2026-01-08)  
-**Current version:** v1.2.8 (2026-01-20)
+**Current version:** v1.2.9 (2026-01-20)
 
 ## 📝 Release Notes
 
 
+
+### v1.2.9 (2026-01-20)
+
+- **Entrypoint fix**: `app.py` calls `src.app.app.main()` without import side effects.
+- **Overview fix**: Consistent routing between `app.py` and `src/app/app.py`.
 
 ### v1.2.8 (2026-01-20)
 
