@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --bg: #12171d;
+  --panel: #1a212b;
+  --panel-2: #222b36;
+  --border: #2e3946;
+  --text: #e6ecf3;
+  --muted: #9ba8b8;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.terminal-panel {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 10px;
+}

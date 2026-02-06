@@ -51,9 +51,9 @@ def main() -> None:
     try:
         current_page = page
 
-        if current_page not in ["market", "overview"]:
+        if current_page not in ["market", "overview", "signals"]:
             st.error(f"Unknown page: '{current_page}'")
-            st.write("Expected pages: market, overview")
+            st.write("Expected pages: market, overview, signals")
             st.write(f"Resolved page: {page}")
             st.warning("Resetting to 'market'. Refresh to apply.")
             st.session_state["page"] = "market"
@@ -65,9 +65,12 @@ def main() -> None:
         elif current_page == "market":
             from src.app.pages.market import render as render_market
             render_market()
+        elif current_page == "signals":
+            from src.app.pages.signals import render as render_signals
+            render_signals()
         else:
             st.error(f"Unknown page: '{current_page}'")
-            st.write("Expected pages: market, overview")
+            st.write("Expected pages: market, overview, signals")
             st.write(f"Resolved page: {page}")
             st.stop()
     except Exception as e:

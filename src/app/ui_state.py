@@ -133,11 +133,12 @@ def render_sidebar(current_page: str = "market") -> None:
     
     with st.sidebar:
         # Page navigation: custom buttons with visual highlighting (no "Pages" header)
-        page_options = ["Market", "Overview"]
-        page_mapping = {"Market": "market", "Overview": "overview"}
+        page_options = ["Market", "Overview", "Signals"]
+        page_mapping = {"Market": "market", "Overview": "overview", "Signals": "signals"}
         
         # Get current page display name
-        current_page_display = "Market" if current_page == "market" else "Overview"
+        display_map = {"market": "Market", "overview": "Overview", "signals": "Signals"}
+        current_page_display = display_map.get(current_page, "Market")
         
         # Inject custom CSS for selected button styling (bold + blue color)
         st.markdown("""

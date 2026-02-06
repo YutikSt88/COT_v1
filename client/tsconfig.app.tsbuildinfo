@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/layout/app-shell.tsx","./src/components/ui/button.tsx","./src/lib/api.ts","./src/lib/utils.ts","./src/pages/dashboard-page.tsx","./src/pages/market-detail-page.tsx","./src/pages/signals-page.tsx"],"errors":true,"version":"5.9.3"}

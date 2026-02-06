@@ -657,6 +657,10 @@ def render() -> None:
             if current_page != "overview":
                 st.session_state["page"] = "overview"
                 st.rerun()
+        if st.button("Signals", type="primary" if current_page == "signals" else "secondary", use_container_width=True):
+            if current_page != "signals":
+                st.session_state["page"] = "signals"
+                st.rerun()
 
         st.markdown("---")
         st.markdown("### Filters")
