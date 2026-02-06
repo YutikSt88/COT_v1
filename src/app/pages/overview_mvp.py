@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import os
 import sys
 import subprocess
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -20,6 +20,7 @@ from src.app.ui_state import (
     set_selected_asset,
 )
 from src.common.paths import ProjectPaths
+from src.app.auth import has_permission
 from src.app.pages.overview_sections import (
     render_snapshot,
     render_flow_rotation_section,
@@ -642,46 +643,86 @@ def render() -> None:
                                 )
                                 st.rerun()
 
-        st.markdown("---")
-        with st.expander("Data update (admin)", expanded=False):
-            st.caption("Local update. Runs full pipeline: ingest -> normalize -> compute.")
-            if st.button("Run compute", key="run_compute_button", use_container_width=True):
-                env = os.environ.copy()
-                existing = env.get("PYTHONPATH", "")
-                env["PYTHONPATH"] = str(REPO_ROOT) + (os.pathsep + existing if existing else "")
+        if has_permission("run_pipeline"):
+            st.markdown("---")
+            with st.expander("Data update (admin)", expanded=False):
+                st.caption("Local update. Runs full pipeline: ingest -> normalize -> compute.")
 
-                steps = [
-                    ("ingest", ["-m", "src.ingest.run_ingest", "--root", str(REPO_ROOT), "--log-level", "INFO"]),
-                    ("normalize", ["-m", "src.normalize.run_normalize", "--root", str(REPO_ROOT), "--log-level", "INFO"]),
-                    ("compute", ["-m", "src.compute.run_compute", "--root", str(REPO_ROOT), "--log-level", "INFO"]),
-                ]
+                # Streamlit restriction: widget-bound session_state keys cannot be
+                # changed after widget instantiation in the same run.
+                # Apply deferred reset on the next rerun before creating widgets.
+                if st.session_state.get("run_pipeline_reset_pending"):
+                    st.session_state.pop("run_pipeline_ack", None)
+                    st.session_state.pop("run_pipeline_confirm_text", None)
+                    st.session_state.pop("run_pipeline_reset_pending", None)
 
-                with st.spinner("Running full pipeline..."):
-                    for step_name, args in steps:
-                        cmd = [sys.executable, *args]
+                lock_path = REPO_ROOT / "data" / "compute" / ".pipeline.lock"
+                is_running = lock_path.exists()
+                if is_running:
+                    lock_msg = "Pipeline is already running."
+                    try:
+                        lock_data = json.loads(lock_path.read_text(encoding="utf-8"))
+                        started = lock_data.get("started_at_utc")
+                        pid = lock_data.get("pid")
+                        lock_msg = f"Pipeline is already running (pid={pid}, started_at_utc={started})."
+                    except Exception:
+                        pass
+                    st.warning(lock_msg)
+
+                confirm_run = st.checkbox(
+                    "I understand this will update data artifacts.",
+                    key="run_pipeline_ack",
+                )
+                confirm_text = st.text_input(
+                    "Type RUN to confirm",
+                    key="run_pipeline_confirm_text",
+                    placeholder="RUN",
+                )
+
+                can_run = (
+                    confirm_run
+                    and (confirm_text.strip().upper() == "RUN")
+                    and (not is_running)
+                )
+                if st.button(
+                    "Run pipeline",
+                    key="run_pipeline_button",
+                    use_container_width=True,
+                    disabled=not can_run,
+                ):
+                    cmd = [
+                        sys.executable,
+                        str(REPO_ROOT / "scripts" / "run_pipeline.py"),
+                        "--root",
+                        str(REPO_ROOT),
+                        "--log-level",
+                        "INFO",
+                        "--yes",
+                    ]
+                    with st.spinner("Running full pipeline..."):
                         result = subprocess.run(
                             cmd,
                             capture_output=True,
                             text=True,
                             cwd=str(REPO_ROOT),
-                            env=env,
                         )
-                        if result.returncode != 0:
-                            st.error(f"{step_name} failed.")
-                            if result.stdout:
-                                st.code(result.stdout)
-                            if result.stderr:
-                                st.code(result.stderr)
-                            return
-                        if result.stdout:
-                            st.code(result.stdout)
 
-                st.success("Pipeline finished successfully.")
-                # Force reload of metrics and reset week index after compute.
-                st.cache_data.clear()
-                st.session_state.pop("overview_last_asset", None)
-                st.session_state.pop("overview_week_index", None)
-                st.rerun()
+                    if result.stdout:
+                        st.code(result.stdout)
+                    if result.stderr:
+                        st.code(result.stderr)
+
+                    if result.returncode != 0:
+                        st.error(f"Pipeline failed (exit code {result.returncode}).")
+                        return
+
+                    st.success("Pipeline finished successfully.")
+                    # Force reload of metrics and reset week index after compute.
+                    st.cache_data.clear()
+                    st.session_state.pop("overview_last_asset", None)
+                    st.session_state.pop("overview_week_index", None)
+                    st.session_state["run_pipeline_reset_pending"] = True
+                    st.rerun()
 
         st.markdown("---")
         st.caption(f"Version: {APP_VERSION}")

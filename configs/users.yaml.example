@@ -1,0 +1,3 @@
+﻿# Deprecated
+# users.yaml is no longer used.
+# Authentication is stored in SQLite DB: data/app/auth.db

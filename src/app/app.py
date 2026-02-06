@@ -7,6 +7,7 @@ import traceback
 from pathlib import Path
 
 import streamlit as st
+from src.app.auth import require_authentication, render_auth_sidebar
 
 
 def main() -> None:
@@ -35,6 +36,11 @@ def main() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+    if not require_authentication():
+        st.stop()
+
+    render_auth_sidebar()
 
     # Deterministic routing: use only st.session_state["page"]
     if "page" not in st.session_state:

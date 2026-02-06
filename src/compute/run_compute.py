@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
@@ -52,9 +51,6 @@ def main():
     args = parser.parse_args()
     
     logger = setup_logging(args.log_level)
-    
-    # Debug: check sys.path to detect shadowing
-    logger.info(f"[compute][debug] sys.path[0:5]={sys.path[0:5]}")
     
     paths = ProjectPaths(Path(args.root).resolve())
 

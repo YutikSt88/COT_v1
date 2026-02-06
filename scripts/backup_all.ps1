@@ -5,12 +5,12 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "COT_v1 Complete Backup (v1.1.1)" -ForegroundColor Cyan
+Write-Host "COT_v1 Complete Backup (v1.2.9)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Set version tag
-$VersionTag = "v1.1.1"
+$VersionTag = "v1.2.9"
 $DateTag = (Get-Date).ToString("yyyy-MM-dd")
 
 # Get script directory

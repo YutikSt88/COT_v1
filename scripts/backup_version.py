@@ -8,7 +8,7 @@ from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 # Version to backup
-VERSION = "v1.2.1"
+VERSION = "v1.2.9"
 TODAY = date.today().strftime("%Y-%m-%d")
 
 # Paths
@@ -18,7 +18,6 @@ CODE_ZIP = BACKUP_DIR / f"COT_v1_code_{TODAY}__{VERSION}.zip"
 DATA_ZIP = BACKUP_DIR / f"COT_v1_data_{TODAY}__{VERSION}.zip"
 
 # Code backup paths (check existence before adding)
-# Note: root app.py removed (canonical entrypoint is src/app/app.py)
 CODE_PATHS = [
     "src",
     "configs",
@@ -29,7 +28,7 @@ CODE_PATHS = [
     "pyproject.toml",
     "README.md",
     "_backup/RESTORE.md",
-    # "app.py" removed - canonical entrypoint is src/app/app.py
+    "app.py",
 ]
 
 # Data backup paths (only specific directories and files)

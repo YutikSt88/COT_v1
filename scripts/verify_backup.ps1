@@ -1,6 +1,6 @@
 # Verify backup ZIP files
 param(
-    [string]$VersionTag = "v1.1.1"
+    [string]$VersionTag = "v1.2.9"
 )
 
 $ErrorActionPreference = "Stop"
