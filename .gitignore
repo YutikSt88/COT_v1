@@ -41,3 +41,8 @@ _backup/
 
 # Rollback safety
 _rollback_safety/
+
+# Frontend (Node)
+client/node_modules/
+client/dist/
+client/.vite/
