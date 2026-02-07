@@ -1,92 +1,127 @@
-# COT_v1: Architecture Guide
+﻿# COT_v1 Architecture
 
-Детальний опис архітектури проєкту COT_v1, compute philosophy, UI vs compute rules, та як правильно додавати нові метрики.
+## 1. Layers
 
-## 🏗️ Architecture Philosophy
+### 1.1 Ingest (`src/ingest`)
 
-### Immutable Data Pipeline
-- Кожен крок пайплайна створює **новий** файл з результатами.
-- Старі файли не модифікуються.
-- Завжди можна відкотитися на будь-якому кроці без втрати даних.
+Відповідальність:
 
-### Separation of Concerns
+- завантаження CFTC ZIP
+- запис snapshot-ів у `data/raw`
+- ведення manifest
 
-**Compute Layer** (`src/compute/`) — **єдине місце для всіх обчислень**
-- Розрахунок метрик (net, totals, rolling, extremes, flows/rotation)
-- Агрегації та трансформації
-- Створення semantic tables
+Вихід:
 
-**UI Layer** (`src/app/`) — **тільки читання та візуалізація**
-- Читання готових метрик з `data/compute/`
-- Фільтрація/форматування для UI
-- Візуалізація
+- файли в `data/raw/...`
 
-⚠️ Виняток: admin кнопка **Run compute** в `Overview` (локально запускає ingest/normalize/compute).
+### 1.2 Normalize (`src/normalize`)
 
-### Snapshot-based Ingest
-- Формат: `data/raw/<dataset>/<year>/deacot<year>__YYYYMMDD_HHMMSS.zip`
-- Історичні роки: якщо є OK snapshot — skip; якщо файл зник — відновити
-- Refresh роки (поточний і попередній): завжди download → hash compare
-- `manifest.csv` append-only: `OK/UNCHANGED/ERROR`
-- `downloaded_at_utc` — останній успішний update
-- `checked_at_utc` — час перевірки (для нових рядків)
+Відповідальність:
 
-## 📊 Compute Layer Philosophy
+- парсинг raw ZIP
+- нормалізація в canonical-структуру
+- базові QA перевірки
 
-### Semantic Tables
-1. `positions_weekly.parquet`
-2. `changes_weekly.parquet`
-3. `flows_weekly.parquet`
-4. `rolling_weekly.parquet`
-5. `extremes_weekly.parquet`
-6. `moves_weekly.parquet`
-7. `metrics_weekly.parquet` (wide view)
+Вихід:
 
-Переваги:
-- Чітка відповідальність кожної таблиці
-- Легко додавати метрики
-- Легко тестувати коректність
+- `data/canonical/cot_weekly_canonical_full.parquet`
 
-### No Hidden Calculations
-- Кожна метрика має свій модуль `build_*.py`
-- Валідації — у `src/compute/validations.py`
+### 1.3 Compute (`src/compute`)
 
-## 🎨 UI vs Compute Rules
+Відповідальність:
 
-**UI дозволено:**
-- читання з `data/compute/`
-- slicing/formatting
-- sparklines (без нових обчислень)
+- всі обчислення метрик
+- генерація semantic/wide таблиць
 
-**UI заборонено:**
-- rolling/extremes/net-розрахунки
-- модифікація `data/`
-- створення нових parquet
+Вихід:
 
-## 🔧 Як додати нову метрику
+- `data/compute/positions_weekly.parquet`
+- `data/compute/changes_weekly.parquet`
+- `data/compute/flows_weekly.parquet`
+- `data/compute/rolling_weekly.parquet`
+- `data/compute/extremes_weekly.parquet`
+- `data/compute/moves_weekly.parquet`
+- `data/compute/metrics_weekly.parquet`
+- `data/compute/market_radar_latest.parquet`
+- `data/compute/market_positioning_latest.parquet`
 
-1) Додати розрахунок у відповідний `src/compute/build_*.py`  
-2) Підключити у `src/compute/run_compute.py`  
-3) Перевірити/оновити валідації у `src/compute/validations.py`  
-4) Перезапустити compute  
-5) Використати колонку в UI (read-only)
+### 1.4 UI (`src/app`)
 
-## 🚪 Entrypoint
+Поточний продакшн UI: **Streamlit**.
 
-**Streamlit Cloud:** `app.py` (root)  
-**Локально:** `streamlit run src/app/app.py` або `streamlit run app.py`
+Ключове правило:
 
-## 🔁 Restore
+- UI читає дані з `data/compute`
+- UI не виконує бізнес-обчислення compute-рівня
 
-**Single source of truth:** `_backup/RESTORE.md`
+## 2. Runtime entrypoints
 
-## 📚 Related Documentation
+### Streamlit app
 
-- `README.md`
-- `_backup/RESTORE.md`
-- `docs/DEV_HANDOFF.md`
-- `docs/COMPUTE_METRICS.md`
+- Root entrypoint: `app.py`
+- Main app module: `src/app/app.py`
 
----
+### API (додатковий dev-сервіс)
 
-**Last updated:** 2026-01-20 (v1.2.9)
+- `src/api/app.py` (FastAPI)
+
+### Optional frontend sandbox
+
+- `client/` (React), використовується для експериментів і не є основним Streamlit production UI.
+
+## 3. Data update flow
+
+Офіційний шлях оновлення даних:
+
+```powershell
+python .\scripts\run_pipeline.py --root . --log-level INFO --yes
+```
+
+Це запускає:
+
+1. ingest
+2. normalize
+3. compute
+
+## 4. Operations shortcuts
+
+### Sync local -> `origin/main`
+
+```powershell
+.\scripts\sync-main.ps1
+```
+
+### Run Streamlit
+
+```powershell
+.\scripts\dev-up.ps1 -Mode streamlit
+```
+
+### Run API + React (dev)
+
+```powershell
+.\scripts\dev-up.ps1 -Mode react
+```
+
+## 5. Deployment
+
+### Streamlit Community Cloud
+
+- Branch: `main`
+- Main file path: `app.py`
+- Dependencies: `requirements.txt`
+
+Після `git push origin main` виконується redeploy.
+
+## 6. Design direction (current)
+
+У Streamlit реалізовано термінальний стиль сторінок:
+
+- `Dashboard` (file: `src/app/pages/market.py`)
+- `Market Detail` (file: `src/app/pages/overview_mvp.py`)
+- `Signals` (file: `src/app/pages/signals.py`)
+
+Спільні UI helper-и:
+
+- `src/app/pages/_terminal_ui.py`
+

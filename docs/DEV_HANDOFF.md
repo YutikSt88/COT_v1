@@ -1,73 +1,96 @@
-# COT_v1: Developer Handoff Guide
+﻿# COT_v1 Developer Handoff
 
-Internal playbook для розробників, які працюють з проєктом COT_v1.
+Це практична інструкція для нового розробника, який має підтримувати проект без довгого входження в контекст.
 
-## 🎯 Мета документації
-- Новий розробник не ламає compute
-- UI не перетворюється на data-kitchen
-- Проєкт підтримується роками
+## 1. Що важливо знати одразу
 
-## 🤖 AI/Agent Rules
+- Основний production UI: **Streamlit**
+- Root entrypoint: `app.py`
+- Дані для UI: тільки `data/compute/*`
+- Оновлення даних робиться pipeline-командою (див. нижче)
 
-### Patch-only підхід
-- Мінімальні зміни для досягнення мети
-- Не рефакторити “все” без явної причини
-
-### Не чіпати не-зазначені файли
-Якщо завдання стосується `src/app/pages/overview_mvp.py`, змінювати тільки його.
-
-### Один logical change = один task
-Розбивай складні зміни на менші.
-
-### Жодних “refactor all”
-Заборонено: “Refactor all UI code”, “Clean up all files”, “Optimize everything”.
-
-## 🏗️ Architecture Rules
-
-### Compute Layer (`src/compute/**`)
-**Може:**
-- читати `data/canonical/`
-- писати `data/compute/`
-- рахувати метрики
-
-**Не може:**
-- модифікувати UI
-- писати в UI state
-
-### UI Layer (`src/app/**`)
-**Може:**
-- читати `data/compute/`
-- фільтрувати/форматувати дані
-- рендерити UI
-
-**Не може:**
-- писати в `data/`
-- рахувати метрики
-
-⚠️ Виняток: admin кнопка **Run compute** в `Overview` для локального запуску пайплайну.
-
-## 🔧 Entrypoint
-
-**Streamlit Cloud:** `app.py` (root)  
-**Локально:** `streamlit run src/app/app.py` або `streamlit run app.py`
-
-## 🧪 Smoke Tests
+## 2. Мінімальний старт за 5 хвилин
 
 ```powershell
-pytest tests/ -v
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+.\scripts\dev-up.ps1 -Mode streamlit
 ```
 
-## 🧭 Common Pitfalls
-- Розрахунки у UI (заборонено)
-- Модифікація `data/` у UI (заборонено)
-- Приховані side-effects у session_state
+Після цього UI доступний на `http://localhost:8501`.
 
-## 📚 References
-- `README.md`
-- `docs/ARCHITECTURE.md`
-- `docs/COMPUTE_METRICS.md`
-- `_backup/RESTORE.md`
+## 3. Оновлення коду з main
 
----
+```powershell
+.\scripts\sync-main.ps1
+```
 
-**Last updated:** 2026-01-20 (v1.2.9)
+Скрипт:
+
+- переходить на `main`
+- робить `fetch`
+- робить fast-forward pull (або hard-reset у force-режимі)
+
+## 4. Оновлення даних (адмін-операція)
+
+```powershell
+python .\scripts\run_pipeline.py --root . --log-level INFO --yes
+```
+
+Це генерує актуальні parquet-файли в `data/compute`.
+
+## 5. Де шукати основний код
+
+- App routing/auth shell: `src/app/app.py`
+- Auth + RBAC: `src/app/auth.py`
+- Dashboard page: `src/app/pages/market.py`
+- Market Detail page: `src/app/pages/overview_mvp.py`
+- Signals page: `src/app/pages/signals.py`
+- Shared UI helpers: `src/app/pages/_terminal_ui.py`
+- Pipeline runner: `scripts/run_pipeline.py`
+
+## 6. Правила змін
+
+- Не переносити compute-логіку в UI
+- Не змінювати data contracts без оновлення docs
+- Перед commit перевіряти, що випадково не потрапили локальні артефакти (`auth.db`, `node_modules`, тимчасові lock-файли)
+
+## 7. Часті проблеми
+
+### `market_radar_latest.parquet not found`
+
+Причина: не запускали compute pipeline.
+
+Рішення:
+
+```powershell
+python .\scripts\run_pipeline.py --root . --log-level INFO --yes
+```
+
+### `npm ENOENT package.json`
+
+Причина: команда запущена не в `client`.
+
+Рішення:
+
+```powershell
+cd .\client
+npm install
+npm run dev
+```
+
+### `uvicorn ... Address already in use`
+
+Причина: порт 8000 вже зайнятий іншим процесом.
+
+Рішення: зупинити попередній процес або використати інший порт.
+
+## 8. Деплой
+
+Streamlit Cloud:
+
+- Branch: `main`
+- Main file: `app.py`
+- Після `git push origin main` виконай `Reboot app` (за потреби `Clear cache + Reboot`).
+
